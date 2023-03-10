@@ -40,8 +40,8 @@
 ##                                                                      #
 #########################################################################
 ##                                                                      #
-## Version: 2.1                                                         #
-## Date:    09.11.2011                                                  #
+## Version: 2.2                                                         #
+## Date:    23.11.2011                                                  #
 ##                                                                      #
 #########################################################################
 
@@ -73,23 +73,38 @@ class IPv6Packet:
 
               -- NSconf -- Neighbor Solicitation (Target IPv6 address)
 
+              -- NDOpt  -- Neighbor Discovery Options (Option, link-layer source and destination address , MTU, Prefix, Prefix Length, flags, Valid Lifetime, Preferred Lifetime, Source Address List, Target Address List)
+                            -- Option -- 7 bit binary value for the identification of the Neighbor Discovery Options:: 
+
+                                xxxxxx1 = Source Link-layer Address
+                                xxxxx1x = Target Link-layer Address
+                                xxxx1xx = Prefix Information
+                                xxx1xxx = Redirected Header
+                                xx1xxxx = MTU
+                                x1xxxxx = Source Address List
+                                1xxxxxx = Target Address List
+
+              -- Redirect -- Redirect Message (Target IPv6 address, Destination IPv6 address)
+
               -- ICMP   -- Internet Control Message Protocol (Code, Type, Message, indize)
                             -- indize -- int value for the identification of the ICMP type:: 
 
-                                1 = Destination Unreachable
-                                2 = Packet Too Big
-                                3 = Time Exceeded
-                                4 = Parameter Problem
+                                  1 = Destination Unreachable
+                                  2 = Packet Too Big
+                                  3 = Time Exceeded
+                                  4 = Parameter Problem
                                 128 = Echo Request
                                 129 = Echo Reply
-                                130 - Multicast Listener Query
-                                131 - Multicast Listener Report
-                                132 - Multicast Listener Done
+                                130 = Multicast Listener Query
+                                131 = Multicast Listener Report
+                                132 = Multicast Listener Done
                                 133 = Router Solicitation
                                 134 = Router Advertisement
                                 135 = Neighbor Solicitation
                                 136 = Neighbor Advertisement
                                 137 = Redirect
+                                141 = Inverse Neighbor Discovery Solicitation
+                                142 = Inverse Neighbor Discovery Advertisement
                                 256 = other Type
 
               -- PTB    -- ICMP Packet too big (MTU)
@@ -109,9 +124,10 @@ class IPv6Packet:
     IPHdr = {'SrcIPAddr': None, 'DstIPAddr': None, 'HopLimit': 64, 'TrafficClass': 0, 'FlowLabel': 0 , 'ExpertMode': False}
     ExtHdr = [['','','','']]
     indize = 0
-    RAconf = {'Prefix':'fd00:141:64:1::','Prefixlen':'64','RA_LLSrcAddr':'', 'M': False, 'O': False, 'RLTime':'1800', 'CHLim': '255'}
+    RAconf = {'M': False, 'O': False, 'RLTime':'1800', 'CHLim': '255'}
     NSconf = {'NS_tgtAddr': '::'}
-    NAconf = {'NA_tgtAddr': '::', 'R' : True, 'S' : False, 'O' : True}
+    NAconf = {'NA_tgtAddr': '::', 'R': True, 'S': False, 'O': True}
+    NDOpt = {'Option': 0, 'ND_SrcLLAddr': '00:00:00:00:00:00', 'ND_DstLLAddr': 'FF:FF:FF:FF:FF:FF', 'MTU': 1280, 'Prefix': 'fd00:141:64:1::', 'Prefixlen':'64', 'L': True, 'A': True, 'ValidL': '4294967295', 'PreferredL': '4294967295', 'SrcAddrList': [], 'TgtAddrList': []}
     Redirect = {'Re_tgtAddr': '::', 'Re_DstAddr': '::'}
     ICMP = {'indize': 128, 'Type': '1', 'Code': '0', 'Message': '', 'Pointer': '6', 'MRD': 10000, 'MLAddr': '::'}
     PTB = {'MTU': '1280'}
@@ -145,21 +161,29 @@ class Buildit:
         self.IPv6packet = {'EthHeader':None,'IPHeader':None,
                            'ExtHeader':None,'NextHeader':None}
         self.IPv6Scapy = None
-        self.IPv6Scapy2 = None
 
         ##################
         ## Ethernet Header
 
-        self.IPv6packet['EthHeader'] = Ether(dst=self.IPv6.EthHdr['LLDstAddr'],
-                                             src=self.IPv6.EthHdr['LLSrcAddr'])
+
+        self.IPv6packet['EthHeader'] = Ether()
+
+        if self.IPv6.EthHdr['LLDstAddr'] != 'ff:ff:ff:ff:ff:ff': 
+            self.IPv6packet['EthHeader'].dst = self.IPv6.EthHdr['LLDstAddr']
+        if self.IPv6.EthHdr['LLSrcAddr'] != ':::::':
+            self.IPv6packet['EthHeader'].src = self.IPv6.EthHdr['LLSrcAddr']
+
 
         ##############
         ## IPv6 Header
 
-        self.IPv6packet['IPHeader'] = IPv6(dst=self.IPv6.IPHdr['DstIPAddr'],
-                                           src=self.IPv6.IPHdr['SrcIPAddr'],
-                                           hlim=self.IPv6.IPHdr['HopLimit'])
+        self.IPv6packet['IPHeader'] = IPv6()
+        if self.IPv6.IPHdr['SrcIPAddr'] != ('' and None): 
+            self.IPv6packet['IPHeader'].src=self.IPv6.IPHdr['SrcIPAddr']
+        if self.IPv6.IPHdr['DstIPAddr'] != ('' and None): 
+            self.IPv6packet['IPHeader'].dst=self.IPv6.IPHdr['DstIPAddr']
         if self.IPv6.IPHdr['ExpertMode'] == True:
+            self.IPv6packet['IPHeader'].hlim = self.IPv6.IPHdr['HopLimit']
             self.IPv6packet['IPHeader'].tc = self.IPv6.IPHdr['TrafficClass']
             self.IPv6packet['IPHeader'].fl = self.IPv6.IPHdr['FlowLabel']
 
@@ -186,7 +210,7 @@ class Buildit:
             Interface = None
 
         ##########
-        ## send or save (pcap og Clipbord)
+        ## send or save (pcap or Clipbord)
 		
         if self.IPv6packet['ExtHeader'] == (None or '') and self.IPv6packet['NextHeader'] != None:
             self.IPv6Scapy = (self.IPv6packet['EthHeader']/self.IPv6packet['IPHeader']/self.IPv6packet['NextHeader'])
@@ -198,9 +222,7 @@ class Buildit:
             self.IPv6Scapy = (self.IPv6packet['EthHeader']/self.IPv6packet['IPHeader']/self.IPv6packet['ExtHeader'])
 
         if self.IPv6.indize == 0 and self.IPv6.ICMP['indize'] in (130, 131, 132): # Next Header for Multicast Listener Messages
-            print(self.IPv6.indize, self.IPv6.ICMP['indize'])
             self.IPv6Scapy[len(self.IPv6.ExtHdr)].nh = 58
-            self.IPv6Scapy[len(self.IPv6.ExtHdr)].show()
 
         Command = self.IPv6Scapy.command()
 
@@ -226,13 +248,16 @@ class Buildit:
                 
         elif Option == 1:
             ## save as .pcap
-			
             wrpcap(File, self.IPv6Scapy)
                 
-        else:
+        elif Option == 2:
             ## save to Clipboard
             Clipboard = QtGui.QApplication.clipboard()
             Clipboard.setText(Command)
+                
+        elif Option == 4:
+            ## save as .pdf
+            self.IPv6Scapy.pdfdump(str(File), layer_shift=5)
 
         ## show sourcecode
         disp_sourcecode = QtGui.QMessageBox.information(None, "Scapy Quellcode", "Scapy Quellcode:\n\n%s" % Command )
@@ -301,20 +326,22 @@ class Buildit:
 
         ``IPv6.ICMP['indize']``::
 
-             1 = Destination Unreachable
-             2 = Packet Too Big
-             3 = Time Exceeded
-             4 = Parameter Problem
+               1 = Destination Unreachable
+               2 = Packet Too Big
+               3 = Time Exceeded
+               4 = Parameter Problem
              128 = Echo Request
              129 = Echo Reply
-             130 - Multicast Listener Query
-             131 - Multicast Listener Report
-             132 - Multicast Listener Done
+             130 = Multicast Listener Query
+             131 = Multicast Listener Report
+             132 = Multicast Listener Done
              133 = Router Solicitation
              134 = Router Advertisement
              135 = Neighbor Solicitation
              136 = Neighbor Advertisement
              137 = Redirect
+             141 = Inverse Neighbor Discovery Solicitation
+             142 = Inverse Neighbor Discovery Advertisement
              256 = other Type
         """
 
@@ -347,8 +374,14 @@ class Buildit:
                 NextHeader = self.BuildICMPv6_NA()
             elif self.IPv6.ICMP['indize'] == 137:      # Redirect
                 NextHeader = self.BuildICMPv6_Redirect()
+            elif self.IPv6.ICMP['indize'] == 141:      # Inverse Neighbor Discovery Solicitation
+                NextHeader = self.BuildICMPv6_INDS()
+            elif self.IPv6.ICMP['indize'] == 142:      # Inverse Neighbor Discovery Advetisement
+                NextHeader = self.BuildICMPv6_INDA()
             elif self.IPv6.ICMP['indize'] == 256:      # ICMP Unknown
                 NextHeader = self.BuildICMPv6_Unknown()
+            if self.IPv6.ICMP['indize'] == 133 or 134 or 135 or 136 or 137 or 141 or 142:      # ND Option
+                NextHeader = self.BuildICMPv6_NDOpt(NextHeader)
         elif self.IPv6.indize == 1:             # TCP
             NextHeader = self.BuildTCP()
         elif self.IPv6.indize == 2:             # UDP
@@ -376,6 +409,30 @@ class Buildit:
                 no = 0
             DestUnreach = DestUnreach/capture[no][IPv6]
         return(DestUnreach)
+
+    ## Packet Too Big
+
+    def BuildICMPv6_PacketTooBig(self):
+        """This function creates a packet too big message for the scapy code.
+
+For the packet too big message is the mtu necessary. It is set to 1280 by default.
+Optional you inlude a packet from a pcap file as payload.
+"""
+        if self.IPv6.PTB['MTU'] != '': 
+            MTU = self.IPv6.PTB['MTU']
+        else:
+            MTU = None
+        q = ICMPv6PacketTooBig(mtu=int(MTU), code=int(self.IPv6.ICMP['Code']))
+
+        if self.IPv6.Payload['Capture File'] != '':
+            path = self.IPv6.Payload['Capture File']
+            capture = rdpcap(str(path))
+            if self.IPv6.Payload['Packet No.'] != '':
+                no = int(self.IPv6.Payload['Packet No.'])-1
+            else:
+                no = 0
+            q = q/capture[no][IPv6]
+        return(q)
 
     ## Time Exceeded
 
@@ -474,21 +531,7 @@ This values are saved in the IPv6 array ``IPv6.RAconf``
                        routerlifetime=int(self.IPv6.RAconf['RLTime']), P=0L, retranstimer=0, prf=0L,
                        res=0L)
 
-        prefix_info=ICMPv6NDOptPrefixInfo(A=1L, res2=0, res1=0L, L=1L,
-                                          len=4,
-                                          prefix=str(self.IPv6.RAconf['Prefix']),
-                                          R=0L, validlifetime=1814400,
-                                          prefixlen=int(self.IPv6.RAconf['Prefixlen']),
-                                          preferredlifetime=604800, type=3)
-
-        ## if source link-layer-addr set
-
-        if (self.IPv6.RAconf['RA_LLSrcAddr'] != (None or '')):
-            llad=ICMPv6NDOptSrcLLAddr(type=1, len=1,
-                                      lladdr=str(self.IPv6.RAconf['RA_LLSrcAddr']))
-            return(ra/prefix_info/llad)
-        else:
-            return(ra/prefix_info)
+        return(ra)
 
     ## Neighbor Solicitation
 
@@ -524,29 +567,32 @@ It includes the target and destination address.
 """
         return(ICMPv6ND_Redirect(tgt=str(self.IPv6.Redirect['Re_tgtAddr']), dst=str(self.IPv6.Redirect['Re_DstAddr'])))
 
-    ## Packet Too Big
+    ## Inverse Neighbor Discovery Solicitation
 
-    def BuildICMPv6_PacketTooBig(self):
-        """This function creates a packet too big message for the scapy code.
+    def BuildICMPv6_INDS(self):
+        """This function builds an Inverse Neighbor Discovery Solicitation message.
 
-For the packet too big message is the mtu necessary. It is set to 1280 by default.
-Optional you inlude a packet from a pcap file as payload.
+A Inverse Neighbor Discovery Solicitation needs the Neighbor Discovery Options(ND Option):
+    * Source Link-Layer Address,
+    * Target Link-Layer Address,
+
+and can optional includes the ND Option Source Address List and MTU.
 """
-        if self.IPv6.PTB['MTU'] != '': 
-            MTU = self.IPv6.PTB['MTU']
-        else:
-            MTU = None
-        q = ICMPv6PacketTooBig(mtu=int(MTU), code=int(self.IPv6.ICMP['Code']))
+        return(ICMPv6ND_INDSol())
 
-        if self.IPv6.Payload['Capture File'] != '':
-            path = self.IPv6.Payload['Capture File']
-            capture = rdpcap(str(path))
-            if self.IPv6.Payload['Packet No.'] != '':
-                no = int(self.IPv6.Payload['Packet No.'])-1
-            else:
-                no = 0
-            q = q/capture[no][IPv6]
-        return(q)
+    ## Inverse Neighbor Discovery Advertisement
+
+    def BuildICMPv6_INDS(self):
+        """This function builds an Inverse Neighbor Discovery Advertisement message.
+
+A Inverse Neighbor Discovery Advertisement needs the Neighbor Discovery Options(ND Option):
+    * Source Link-Layer Address,
+    * Target Link-Layer Address,
+    * Target Address List,
+
+and can optional includes the ND Option MTU.
+"""
+        return(ICMPv6ND_INDAdv())
 
     ## ICMP Unknown
 
@@ -560,6 +606,46 @@ This values are saved in the IPv6 array ``IPv6.ICMP``
 """
         q = ICMPv6Unknown(type=int(self.IPv6.ICMP['Type']), code=int(self.IPv6.ICMP['Code']), msgbody=self.IPv6.ICMP['Message'])
         return(q)
+
+    ## Neighbor Disvovery Options
+
+    def BuildICMPv6_NDOpt(self, NextHeader):
+        """This function adds Neightbor Discovery Options to the ICMPv6 typs 133, 134, 135, 136, 137, 141 and 142.
+The options has to be choosen at the GUI.
+"""
+        if self.IPv6.NDOpt['Option'] & 1:
+            sll = ICMPv6NDOptSrcLLAddr(lladdr=str(self.IPv6.NDOpt['ND_SrcLLAddr']))
+            NextHeader = NextHeader/ sll
+        if self.IPv6.NDOpt['Option'] & 2:
+            dll = ICMPv6NDOptDstLLAddr(lladdr=str(self.IPv6.NDOpt['ND_DstLLAddr']))
+            NextHeader = NextHeader/ dll
+        if self.IPv6.NDOpt['Option'] & 4: 
+            pre = ICMPv6NDOptPrefixInfo(L=self.IPv6.NDOpt['L'], A=self.IPv6.NDOpt['A'], 
+                                        prefix=str(self.IPv6.NDOpt['Prefix']), 
+                                        validlifetime=int(self.IPv6.NDOpt['ValidL']), 
+                                        prefixlen=int(self.IPv6.NDOpt['Prefixlen']), 
+                                        preferredlifetime=int(self.IPv6.NDOpt['PreferredL']))
+            NextHeader = NextHeader/ pre
+        if self.IPv6.NDOpt['Option'] & 8:
+            path = self.IPv6.Payload['Capture File']
+            capture = rdpcap(str(path))
+            PCAPno = self.IPv6.Payload['Packet No.']
+            if PCAPno != '':
+                no = int(PCAPno)-1
+            else:
+                no = 0
+            red = ICMPv6NDOptRedirectedHdr(pkt=capture[no][IPv6])
+            NextHeader = NextHeader/ red
+        if self.IPv6.NDOpt['Option'] & 16:
+            mtu = ICMPv6NDOptMTU(mtu=int(self.IPv6.NDOpt['MTU']))
+            NextHeader = NextHeader/ mtu
+        if self.IPv6.NDOpt['Option'] & 32:
+            sal = ICMPv6NDOptSrcAddrList(addrlist=self.IPv6.NDOpt['SrcAddrList'])
+            NextHeader = NextHeader/ sal
+        if self.IPv6.NDOpt['Option'] & 64:
+            tal = ICMPv6NDOptTgtAddrList(addrlist=self.IPv6.NDOpt['TgtAddrList'])
+            NextHeader = NextHeader/ tal        
+        return (NextHeader)
 
     ## TCP
 
