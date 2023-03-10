@@ -40,267 +40,18 @@
 ##                                                                      #
 #########################################################################
 ##                                                                      #
-## Version: 1.3                                                         #
-## Date:    31.03.2011                                                  #
+## Version: 1.4                                                         #
+## Date:    26.08.2011                                                  #
 ##                                                                      #
 #########################################################################
 
 import sys
 from PyQt4 import QtCore, QtGui, Qt
 from scapy.all import *
-
-class EH(QtGui.QDialog):
-    """Extension Header"""
-    def __init__(self, ExtHdr):
-        QtGui.QDialog.__init__(self)
-        self.setWindowTitle("Extension Header")
-        self.ExtHdr = ExtHdr
-        self.Label = QtGui.QLabel("Extension Header:", self)
-        self.Label.move(5, 5)
-        self.ExtensionHdr = QtGui.QComboBox(self)
-        self.ExtensionHdr.insertItem(0, 'Hop By Hop Options')
-        self.ExtensionHdr.insertItem(1, 'Destination Options')
-        self.ExtensionHdr.insertItem(2, 'Routing')
-        self.ExtensionHdr.insertItem(3, 'Fragmentation')
-        self.ExtensionHdr.setGeometry(QtCore.QRect(10, 30, 250, 31))
-
-        ## Hop-By-Hop Header
-        self.HopByHopHdr = QtGui.QWidget(self)
-        self.HopByHopHdr.setGeometry(QtCore.QRect(0, 60, 360, 250))
-
-        ## Destination Header
-        self.DestinationHdr = QtGui.QWidget(self)
-        self.DestinationHdr.setGeometry(QtCore.QRect(0, 60, 360, 250))
-        
-        ## Routing Header Type 0
-        self.RoutingHdr = QtGui.QWidget(self)
-        self.RoutingHdr.setGeometry(QtCore.QRect(0, 60, 360, 250))
-        self.RoutingHdr_Label = QtGui.QLabel("Routing Hop addresses:", self.RoutingHdr)
-        self.RoutingHdr_Label.move(5, 10)
-        self.RoutingHdr_AddrArray = QtGui.QTableWidget(0, 1, self.RoutingHdr)
-        self.RoutingHdr_AddrArray.setHorizontalHeaderLabels(["Routing Hop"])
-        self.RoutingHdr_AddrArray.setColumnWidth(0,200)
-        self.RoutingHdr_AddrArray.setGeometry(QtCore.QRect(10, 40, 250, 150))
-        self.RoutingHdr_Address = QtGui.QLineEdit(self.RoutingHdr)
-        self.RoutingHdr_Address.setGeometry(QtCore.QRect(10, 200, 250, 31))
-        self.RoutingHdr_AddButton = QtGui.QPushButton("Add",self.RoutingHdr)
-        self.RoutingHdr_AddButton.move(270, 200)
-        self.RoutingHdr_DeleteButton = QtGui.QPushButton("Delete",self.RoutingHdr)
-        self.RoutingHdr_DeleteButton.move(270, 165)
-        self.connect(self.RoutingHdr_AddButton, QtCore.SIGNAL('clicked()'), self.AddIP)
-        self.connect(self.RoutingHdr_DeleteButton, QtCore.SIGNAL('clicked()'), self.DeleteIP)
-
-        ## Fragment Header
-        self.FragmentHdr = QtGui.QWidget(self)
-        self.FragmentHdr.setGeometry(QtCore.QRect(0, 60, 360, 250))
-        self.FragmentHdr_Label = QtGui.QLabel("Fragment Offset:", self.FragmentHdr)
-        self.FragmentHdr_Label.move(5, 10)
-        self.FragmentHdr_FragOffset = QtGui.QLineEdit('0', self.FragmentHdr)
-        self.FragmentHdr_FragOffset.setGeometry(QtCore.QRect(10, 35, 300, 31))
-        self.FragmentHdr_Label_2 = QtGui.QLabel("Identification:", self.FragmentHdr)
-        self.FragmentHdr_Label_2.move(5, 80)
-        self.FragmentHdr_ID = QtGui.QLineEdit('0', self.FragmentHdr)
-        self.FragmentHdr_ID.setGeometry(QtCore.QRect(10, 105, 300, 30))
-        self.FragmentHdr_M = QtGui.QCheckBox("Last Package", self.FragmentHdr)
-        self.FragmentHdr_M.move(10, 160)
-        
-        self.HopByHopHdr.setVisible(False)
-        self.DestinationHdr.setVisible(False)
-        self.RoutingHdr.setVisible(False)
-        self.FragmentHdr.setVisible(False)
-
-        if self.ExtHdr[0] == '':
-            self.HopByHopHdr.setVisible(True)
-        elif self.ExtHdr[0] == 'Hop By Hop Options':
-            self.ExtensionHdr.setCurrentIndex(0)
-            self.HopByHopHdr.setVisible(True)
-
-        elif self.ExtHdr[0] == 'Destination Options':
-            self.ExtensionHdr.setCurrentIndex(1)
-            self.DestinationHdr.setVisible(True)
-
-        elif self.ExtHdr[0] == 'Routing':
-            self.ExtensionHdr.setCurrentIndex(2)
-            self.RoutingHdr.setVisible(True)
-            i = len(self.ExtHdr[1])
-            for d in range(i):
-                self.RoutingHdr_AddrArray.insertRow(d)
-                t1 = QtGui.QTableWidgetItem(self.ExtHdr[1][d])
-                self.RoutingHdr_AddrArray.setItem(d, 0, t1)
-        elif self.ExtHdr[0] == 'Fragmentation':
-            self.ExtensionHdr.setCurrentIndex(3)
-            self.FragmentHdr.setVisible(True)
-            self.FragmentHdr_FragOffset.setText(str(self.ExtHdr[1]))
-            self.FragmentHdr_ID.setText(str(self.ExtHdr[2]))
-            if self.ExtHdr[3] == 0:
-                self.FragmentHdr_M.setChecked(True)
-             
-
-        self.connect(self.ExtensionHdr, QtCore.SIGNAL('activated(int)'), self.EHConf)
-        self.OKButton = QtGui.QPushButton("OK",self)
-        self.OKButton.setGeometry(QtCore.QRect(111, 300, 98, 27))
-        self.connect(self.OKButton, QtCore.SIGNAL('clicked()'), self.fertig)
-        self.show()
- 
-    def EHConf(self):
-        if self.ExtensionHdr.currentText() == 'Hop By Hop Options':
-            self.HopByHopHdr.setVisible(True)
-            self.DestinationHdr.setVisible(False)
-            self.RoutingHdr.setVisible(False)
-            self.FragmentHdr.setVisible(False)
-        elif self.ExtensionHdr.currentText() == 'Destination Options':
-            self.HopByHopHdr.setVisible(False)
-            self.DestinationHdr.setVisible(True)
-            self.RoutingHdr.setVisible(False)
-            self.FragmentHdr.setVisible(False)
-        elif self.ExtensionHdr.currentText() == 'Routing':
-            self.HopByHopHdr.setVisible(False)
-            self.DestinationHdr.setVisible(False)
-            self.RoutingHdr.setVisible(True)
-            self.FragmentHdr.setVisible(False)
-        elif self.ExtensionHdr.currentText() == 'Fragmentation':
-            self.HopByHopHdr.setVisible(False)
-            self.DestinationHdr.setVisible(False)
-            self.RoutingHdr.setVisible(False)
-            self.FragmentHdr.setVisible(True)
-
-
-    def AddIP(self):
-        numRows = self.RoutingHdr_AddrArray.rowCount()
-        if numRows < 16:
-            self.RoutingHdr_AddrArray.insertRow(numRows)
-            t1 = QtGui.QTableWidgetItem(self.RoutingHdr_Address.text())
-            self.RoutingHdr_AddrArray.setItem(numRows, 0, t1)
-        else:
-            self.err_msg = QtGui.QMessageBox.information(None, "Info!", "More addresses are not possible!")
-
-    def DeleteIP(self):
-        Row = self.RoutingHdr_AddrArray.currentRow()
-        if Row >= 0:
-            self.RoutingHdr_AddrArray.removeRow(Row)
-
-    def fertig(self):
-        self.ExtHdr[0] = self.ExtensionHdr.currentText()
-        self.addresses=[]
-            
-        if self.ExtHdr[0] == 'Routing':
-            i = self.RoutingHdr_AddrArray.rowCount()
-            if i > 0:
-                for d in range(i):
-                    self.addresses.append([])
-                    self.addresses[d] = str(QtGui.QTableWidgetItem.text(self.RoutingHdr_AddrArray.item(d, 0)))
-                self.ExtHdr[1] = self.addresses
-            else:
-                self.err_msg = QtGui.QMessageBox.information(None, "Info!", "Min one addresse is requiered!")
-        elif self.ExtHdr[0] == 'Fragmentation':
-            if self.FragmentHdr_FragOffset.text() == '':
-                self.FragmentHdr_FragOffset.setText('0')
-            if self.FragmentHdr_ID.text() == '':
-                self.FragmentHdr_ID.setText('0')
-            self.ExtHdr[1] = int(self.FragmentHdr_FragOffset.text())
-            self.ExtHdr[2] = int(self.FragmentHdr_ID.text())
-            if self.FragmentHdr_M.isChecked() == True:
-                self.ExtHdr[3] = 0
-            else:
-                self.ExtHdr[3] = 1
-        self.accept()
-
-class RA(QtGui.QDialog):
-    """Router Advertisement"""
-    def __init__(self,RAconf):
-        QtGui.QDialog.__init__(self)
-        self.setWindowTitle("Router Advertisement")
-        self.resize(320, 300)
-        self.RAconf = RAconf
-        self.Label = QtGui.QLabel("Prefix:", self)
-        self.Label.move(5, 15)
-        self.Label_2 = QtGui.QLabel("Prefix lenght:", self)
-        self.Label_2.move(5, 85)
-        self.line = QtGui.QFrame(self)
-        self.line.setGeometry(QtCore.QRect(5, 150, 310, 2))
-        self.line.setFrameShape(QtGui.QFrame.HLine)
-        self.line.setFrameShadow(QtGui.QFrame.Sunken)
-        self.Label_3 = QtGui.QLabel("optional:", self)
-        self.Label_3.move(125, 160)
-        self.Label_4 = QtGui.QLabel("ICMPv6 Option (Source Link-Layer-Address):", self)
-        self.Label_4.move(5, 190)
-        self.Prefix = QtGui.QLineEdit(self)
-        self.Prefix.setGeometry(QtCore.QRect(10, 40, 300, 30))
-        self.Prefix.setText(self.RAconf['Prefix'])
-        self.PrefixLen = QtGui.QLineEdit(self)
-        self.PrefixLen.setGeometry(QtCore.QRect(10, 110, 60, 30)) 
-        self.PrefixLen.setText(self.RAconf['Prefixlen'])
-        self.LLSourceAddr = QtGui.QComboBox(self)
-        self.LLSourceAddr.setGeometry(QtCore.QRect(10, 215, 300, 30))
-        self.LLSourceAddr.setEditable(True)
-
-        ## init cbSrcLLaddr
-        iflist = get_if_list()
-        i = len(iflist)
-        self.LLSourceAddr.insertItem(0, '')
-        for d in range(0, i):
-            self.LLSourceAddr.insertItem(i+1, get_if_hwaddr(iflist[d]))
-        self.LLSourceAddr.setEditText(self.RAconf['SourceLL'])
-
-        self.OKButton = QtGui.QPushButton("OK",self)
-        self.OKButton.setGeometry(QtCore.QRect(111, 260, 98, 27))
-        self.connect(self.OKButton, QtCore.SIGNAL('clicked()'), self.fertig)
-        self.show()
- 
-    def fertig(self):
-        if ((self.Prefix.text() == '') or 
-            (self.PrefixLen.text() == '')):
-            self.err_msg = QtGui.QMessageBox.information(None, "Info!", "Prefix and Prefix length are requiered!\n(Default: Prefix = 'fd00:141:64:1::'; Prefixlength = 64)")
-        if self.Prefix.text() == '':
-            self.Prefix.setText('fd00:141:64:1::')
-        if self.PrefixLen.text() == '':
-            self.PrefixLen.setText('64')
-        self.RAconf['Prefix'] = self.Prefix.text()
-        self.RAconf['Prefixlen'] = self.PrefixLen.text()
-        self.RAconf['SourceLL'] = self.LLSourceAddr.currentText()        
-        self.accept()
-
-class Payload(QtGui.QDialog):
-    """Load Pcap Data"""
-    def __init__(self,PayloadFile):
-        QtGui.QDialog.__init__(self)
-
-        self.setWindowTitle("Payload")
-        self.resize(420, 200)
-        self.PayloadFile = PayloadFile
-
-        self.Label = QtGui.QLabel("Define a packet which will be used as payload.", self)
-        self.Label.setGeometry(QtCore.QRect(5, 0, 320, 30))
-        self.Label_2 = QtGui.QLabel("Capture File:", self)
-        self.Label_2.move(5, 50)
-        self.Label_3 = QtGui.QLabel("Packet No.:", self)
-        self.Label_3.move(5, 110)
-        self.PacketFile = QtGui.QLineEdit(self.PayloadFile['Capture File'], self)
-        self.PacketFile.setGeometry(QtCore.QRect(10, 70, 301, 27))
-        self.PacketNo = QtGui.QLineEdit(self.PayloadFile['Packet No.'], self)
-        self.PacketNo.setGeometry(QtCore.QRect(10, 130, 113, 27))
-        self.pushButton = QtGui.QPushButton("Search...", self)
-        self.pushButton.move(310, 70)
-        self.connect(self.pushButton, QtCore.SIGNAL('clicked(bool)'), self.ask_for_filename)
-
-        self.OKButton = QtGui.QPushButton("OK",self)
-        self.OKButton.setGeometry(QtCore.QRect(161, 160, 98, 27))
-        self.connect(self.OKButton, QtCore.SIGNAL('clicked()'), self.fertig)
-        
-        self.show()
-
-    def ask_for_filename(self):
-        self.fileDialog = QtGui.QFileDialog.getOpenFileName(self,"FileDialog")
-	self.PacketFile.setText(self.fileDialog)
- 
-    def fertig(self):
-        self.PayloadFile['Capture File'] = self.PacketFile.text()
-        self.PayloadFile['Packet No.'] = self.PacketNo.text()
-        
-        self.accept()
+import program_background
+import program_help_gui
 
 class Main(QtGui.QMainWindow):
-
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
         self.setWindowTitle("Scapy GUI")
@@ -308,21 +59,14 @@ class Main(QtGui.QMainWindow):
         self.makeActions()
         self.makeMenu()
 
-        self.EthH = {'LLSourceAddr':None,'LLDstAddr':None}
-        self.IPH = {'Dst':None,'SourceIP':None,'NextHeader':None}
-        self.RAconf = {'Prefix':'fd00:141:64:1::','Prefixlen':'64','SourceLL':''}
-        self.IPv6packet = {'EthHeader':None,'IPHeader':None,
-                           'ExtHeader':None,'NextHeader':None}
-
-        self.ExtHdr = [['','','','']]
-        self.PayloadFile = {'Capture File':'','Packet No.':'1'}
-        self.sourcecode = None ## var to display the sourcecode 
+        self.IPv6DstList = QtCore.QStringList()
+        self.IPv6 = program_background.IPv6Paket()
 
         # TabWidget
         self.tabWidget = QtGui.QTabWidget(self)
         self.tabWidget.setGeometry(QtCore.QRect(0, 30, 600, 300))
 
-	    # Ertes Tab - Ethernet Header
+	        # First Tab - Ethernet Header
         self.tab_EthH = QtGui.QWidget(self.tabWidget)
         self.tabWidget.addTab(self.tab_EthH, "Ethernet Header (optional)")
         self.tab_EthernetHdr_Label = QtGui.QLabel("All fields are optional.", self.tab_EthH)
@@ -336,12 +80,17 @@ class Main(QtGui.QMainWindow):
         self.Interface = QtGui.QComboBox(self.tab_EthH)
         self.Interface.setGeometry(QtCore.QRect(10, 60, 300, 31))
         self.LLDstAddr = QtGui.QLineEdit(self.tab_EthH)
+        self.LLDstAddr.setInputMask('HH:HH:HH:HH:HH:HH')
+        self.LLDstAddr.setText('ff:ff:ff:ff:ff:ff')
         self.LLDstAddr.setGeometry(QtCore.QRect(10, 130, 300, 31))
+        self.LLSrcAddr_help = QtGui.QLineEdit(self.tab_EthH)
+        self.LLSrcAddr_help.setInputMask('HH:HH:HH:HH:HH:HH')
         self.LLSrcAddr = QtGui.QComboBox(self.tab_EthH)
+        self.LLSrcAddr.setLineEdit(self.LLSrcAddr_help)
         self.LLSrcAddr.setGeometry(QtCore.QRect(10, 200, 300, 31))
         self.LLSrcAddr.setEditable(True)
 
-        # Zweites Tab - IPv6 Header
+            # Second Tab - IPv6 Header
         self.tab_IPv6 = QtGui.QWidget(self.tabWidget)
         self.tabWidget.addTab(self.tab_IPv6, "IPv6 Header")
         self.tab_IPv6_Label = QtGui.QLabel("Destination IPv6-address (or name):", self.tab_IPv6)
@@ -351,19 +100,25 @@ class Main(QtGui.QMainWindow):
         self.IPv6_DstAddr = QtGui.QComboBox(self.tab_IPv6)
         self.IPv6_DstAddr.setGeometry(QtCore.QRect(10, 60, 300, 31))
         self.IPv6_DstAddr.setEditable(True)
-        self.IPv6_DstAddr.insertItem(0,'')
-        self.IPv6_DstAddr.insertItem(1,'ff01::1')
-        self.IPv6_DstAddr.insertItem(2,'ff02::1')
-        self.IPv6_DstAddr.insertItem(3,'ff80::1')
-        #self.IPv6_DstAddr.insertItem(4,'2001:0db8:85a3:08d3::1')
+        self.IPv6_DstAddr.setDuplicatesEnabled(True)
+        self.IPv6_DstAddr.addItem('')
+        self.IPv6_DstAddr.addItem('ff01::1')
+        self.IPv6_DstAddr.addItem('ff02::1')
+        self.IPv6_DstAddr.addItem('ff80::1')
+        self.IPv6DstList.append('')
+        self.IPv6DstList.append('ff01::1')
+        self.IPv6DstList.append('ff02::1')
+        self.IPv6DstList.append('ff80::1')
+        self.IPv6DstList.append('fe80::1')
+        self.IPv6DstList.append('::1')
         self.IPv6_SrcAddr = QtGui.QComboBox(self.tab_IPv6)
         self.IPv6_SrcAddr.setGeometry(QtCore.QRect(10, 130, 300, 31))
         self.IPv6_SrcAddr.setEditable(True)
-        self.IPv6_SrcAddr.insertItem(0,'')
-        self.IPv6_SrcAddr.insertItem(1,'ff01::1')
-        self.IPv6_SrcAddr.insertItem(2,'ff02::1')
+        self.IPv6_SrcAddr.addItem('')
+        self.IPv6_SrcAddr.addItem('ff01::1')
+        self.IPv6_SrcAddr.addItem('ff02::1')
 
-        # Drittes Tab - Extension Header
+            # Third Tab - Extension Header
         self.tab_ExtHdr = QtGui.QWidget(self.tabWidget)
         self.tabWidget.addTab(self.tab_ExtHdr, "Extension Header")
         self.ExtHdr_tableWidget = QtGui.QTableWidget(0, 1, self.tab_ExtHdr)
@@ -380,32 +135,61 @@ class Main(QtGui.QMainWindow):
         self.connect(self.ExtHdr_EditButton, QtCore.SIGNAL('clicked(bool)'), self.slotEditExtHdr)
         self.connect(self.ExtHdr_DeleteButton, QtCore.SIGNAL('clicked(bool)'), self.slotDeleteExtHdr)
 
-        # Viertes Tab - Next Header
+            # Forth Tab - Next Header
         self.tab_NextHeader = QtGui.QWidget(self.tabWidget)
         self.tabWidget.addTab(self.tab_NextHeader, "Next Header")
         self.NextHeader_Type = QtGui.QComboBox(self.tab_NextHeader)
-        self.NextHeader_Type.insertItem(0, 'ICMP')
-        self.NextHeader_Type.insertItem(1, 'TCP')
-        self.NextHeader_Type.insertItem(2, 'UDP')
-        self.NextHeader_Type.insertItem(3, 'No Next Header')
+        self.NextHeader_Type.addItem('ICMP')
+        self.NextHeader_Type.addItem('TCP')
+        self.NextHeader_Type.addItem('UDP')
+        self.NextHeader_Type.addItem('No Next Header')
         self.NextHeader_Type.move(10, 20)
-            # ICMP Typ
+                # ICMP Typ
         self.NH_ICMP = QtGui.QWidget(self.tab_NextHeader)
         self.NH_ICMP.setGeometry(QtCore.QRect(0, 60, 600, 250))
         self.NH_ICMP_Ping = QtGui.QRadioButton("Ping", self.NH_ICMP)
-        self.NH_ICMP_Ping.move(30, 30)
+        self.NH_ICMP_Ping.move(30, 10)
         self.NH_ICMP_Ping.setChecked(True)
         self.NH_ICMP_RouterAd = QtGui.QRadioButton("Router Advertisement", self.NH_ICMP)
-        self.NH_ICMP_RouterAd.move(30, 70)
+        self.NH_ICMP_RouterAd.move(30, 40)
         self.connect(self.NH_ICMP_RouterAd, QtCore.SIGNAL('clicked(bool)'), self.slotRouterAdvertisement)
+        self.NH_ICMP_RouterSo = QtGui.QRadioButton("Router Solicitation", self.NH_ICMP)
+        self.NH_ICMP_RouterSo.move(30, 70)
+        self.NH_ICMP_NeighborAd = QtGui.QRadioButton("Neighbor Advertisment", self.NH_ICMP)
+        self.NH_ICMP_NeighborAd.move(30, 100)
+        self.connect(self.NH_ICMP_NeighborAd, QtCore.SIGNAL('clicked(bool)'), self.slotNeighborAd)
+        self.NH_ICMP_NeighborSo = QtGui.QRadioButton("Neighbor Solicitation", self.NH_ICMP)
+        self.NH_ICMP_NeighborSo.move(30, 130)
+        self.connect(self.NH_ICMP_NeighborSo, QtCore.SIGNAL('clicked(bool)'), self.slotNeighborSo)
         self.NH_ICMP_PacketTooBig = QtGui.QRadioButton("Packet Too Big", self.NH_ICMP)
-        self.NH_ICMP_PacketTooBig.move(30, 110)
-        self.connect(self.NH_ICMP_PacketTooBig, QtCore.SIGNAL('clicked(bool)'), self.slotPacket_Too_Big)
+        self.NH_ICMP_PacketTooBig.move(30, 160)
+        self.connect(self.NH_ICMP_PacketTooBig, QtCore.SIGNAL('clicked(bool)'), self.slotPayload)
+        self.NH_ICMP_Unknown = QtGui.QRadioButton("other ICMP Type", self.NH_ICMP)
+        self.NH_ICMP_Unknown.move(330, 10)
         self.NH_ICMP_Label = QtGui.QLabel("MTU:", self.NH_ICMP)
-        self.NH_ICMP_Label.move(80, 140)
+        self.NH_ICMP_Label.move(80, 185)
         self.NH_ICMP_MTU = QtGui.QLineEdit("1280", self.NH_ICMP)
-        self.NH_ICMP_MTU.setGeometry(QtCore.QRect(120, 136, 61, 25))
-            # TCP
+        self.NH_ICMP_MTU.setInputMask('9999999999')
+        self.NH_ICMP_MTU.setGeometry(QtCore.QRect(120, 181, 90, 25))
+        self.NH_ICMP_Label_2 = QtGui.QLabel("Type:", self.NH_ICMP)
+        self.NH_ICMP_Label_2.move(380, 40)
+        self.NH_ICMP_Type = QtGui.QLineEdit("1", self.NH_ICMP)
+        self.NH_ICMP_Type.setInputMask('000')
+        self.NH_ICMP_Type.setGeometry(QtCore.QRect(420, 36, 60, 25))
+        self.NH_ICMP_Label_3 = QtGui.QLabel("Code:", self.NH_ICMP)
+        self.NH_ICMP_Label_3.move(377, 70)
+        self.NH_ICMP_Code = QtGui.QLineEdit("0", self.NH_ICMP)
+        self.NH_ICMP_Code.setInputMask('000')
+        self.NH_ICMP_Code.setGeometry(QtCore.QRect(420, 66, 60, 25))
+        self.NH_ICMP_Label_4 = QtGui.QLabel("Message:", self.NH_ICMP)
+        self.NH_ICMP_Label_4.move(352, 100)
+        self.NH_ICMP_Message = QtGui.QTextEdit("", self.NH_ICMP)
+        self.NH_ICMP_Message.setGeometry(QtCore.QRect(420, 96, 150, 50))
+        self.connect(self.NH_ICMP_MTU, QtCore.SIGNAL('textChanged(QString)'), self.slotMax2_32)
+        self.connect(self.NH_ICMP_Type, QtCore.SIGNAL('textChanged(QString)'), self.slotMax2_8)
+        self.connect(self.NH_ICMP_Code, QtCore.SIGNAL('textChanged(QString)'), self.slotMax2_8)
+
+                # TCP
         self.NH_TCP = QtGui.QWidget(self.tab_NextHeader)
         self.NH_TCP.setGeometry(QtCore.QRect(0, 60, 600, 250))
         self.NH_TCP.setVisible(False)
@@ -439,7 +223,7 @@ class Main(QtGui.QMainWindow):
         self.NH_TCP_Flag_FIN.setAutoExclusive(False)
         self.NH_TCP_Flag_FIN.move(170, 160)
 
-                # TCP Payload
+                    # TCP Payload
         self.NH_TCP_Payload = QtGui.QWidget(self.NH_TCP) 
         self.NH_TCP_Payload.setGeometry(QtCore.QRect(300, 0, 300, 200))
         self.NH_TCP_Payload_Label = QtGui.QLabel("Payload:", self.NH_TCP_Payload)
@@ -449,6 +233,7 @@ class Main(QtGui.QMainWindow):
         self.NH_TCP_Payload_Label_2 = QtGui.QLabel("Length:", self.NH_TCP_Payload)
         self.NH_TCP_Payload_Label_2.move(57, 60)
         self.NH_TCP_Payload_Length = QtGui.QLineEdit("1", self.NH_TCP_Payload)
+        self.NH_TCP_Payload_Length.setInputMask('00000')
         self.NH_TCP_Payload_Length.setGeometry(QtCore.QRect(120, 56, 60, 25))
         self.NH_TCP_Payload_PayString = QtGui.QRadioButton("String:", self.NH_TCP_Payload)
         self.NH_TCP_Payload_PayString.move(30, 90)
@@ -456,10 +241,10 @@ class Main(QtGui.QMainWindow):
         self.NH_TCP_Payload_String.setGeometry(QtCore.QRect(120, 88, 60, 25))
         self.NH_TCP_Payload_PcapFile = QtGui.QRadioButton("pcap File", self.NH_TCP_Payload)
         self.NH_TCP_Payload_PcapFile.move(30, 130)
-        self.connect(self.NH_TCP_Payload_PcapFile, QtCore.SIGNAL('clicked(bool)'), self.slotPayloadTCP)
+        self.connect(self.NH_TCP_Payload_PcapFile, QtCore.SIGNAL('clicked(bool)'), self.slotPayload)
         self.NH_TCP_Payload_NoPayload = QtGui.QRadioButton("No Payload", self.NH_TCP_Payload)
         self.NH_TCP_Payload_NoPayload.move(30, 170)
-            # UDP
+                # UDP
         self.NH_UDP = QtGui.QWidget(self.tab_NextHeader)
         self.NH_UDP.setGeometry(QtCore.QRect(0, 60, 600, 250))
         self.NH_UDP.setVisible(False)
@@ -471,8 +256,8 @@ class Main(QtGui.QMainWindow):
         self.NH_UDP_Label_2.move(30, 70)
         self.NH_UDP_DstPort = QtGui.QLineEdit("53", self.NH_UDP)
         self.NH_UDP_DstPort.setGeometry(QtCore.QRect(150, 66, 60, 25))
-                # UDP Payload
-        self.NH_UDP_Payload = QtGui.QWidget(self.NH_UDP) 
+                    # UDP Payload
+        self.NH_UDP_Payload = QtGui.QWidget(self.NH_UDP)
         self.NH_UDP_Payload.setGeometry(QtCore.QRect(300, 0, 300, 200))
         self.NH_UDP_Label = QtGui.QLabel("Payload:", self.NH_UDP_Payload)
         self.NH_UDP_Payload_XLength = QtGui.QRadioButton("String with 'X' * Length", self.NH_UDP_Payload)
@@ -481,6 +266,7 @@ class Main(QtGui.QMainWindow):
         self.NH_UDP_Label_2 = QtGui.QLabel("Length:", self.NH_UDP_Payload)
         self.NH_UDP_Label_2.move(57, 60)
         self.NH_UDP_Payload_Length = QtGui.QLineEdit("1", self.NH_UDP_Payload)
+        self.NH_TCP_Payload_Length.setInputMask('00000')
         self.NH_UDP_Payload_Length.setGeometry(QtCore.QRect(120, 56, 60, 25))
         self.NH_UDP_Payload_PayString = QtGui.QRadioButton("String:", self.NH_UDP_Payload)
         self.NH_UDP_Payload_PayString.move(30, 90)
@@ -488,10 +274,10 @@ class Main(QtGui.QMainWindow):
         self.NH_UDP_Payload_String.setGeometry(QtCore.QRect(120, 88, 60, 25))
         self.NH_UDP_Payload_PcapFile = QtGui.QRadioButton("pcap File", self.NH_UDP_Payload)
         self.NH_UDP_Payload_PcapFile.move(30, 130)
-        self.connect(self.NH_UDP_Payload_PcapFile, QtCore.SIGNAL('clicked(bool)'), self.slotPayloadUDP)
+        self.connect(self.NH_UDP_Payload_PcapFile, QtCore.SIGNAL('clicked(bool)'),self.slotPayload)
         self.NH_UDP_Payload_NoPayload = QtGui.QRadioButton("No Payload", self.NH_UDP_Payload)
         self.NH_UDP_Payload_NoPayload.move(30, 170)
-            # no Next Header
+                # no Next Header
         self.NH_NoNextHdr = QtGui.QWidget(self.tab_NextHeader)
         self.NH_NoNextHdr.setGeometry(QtCore.QRect(0, 60, 600, 250))
         self.NH_NoNextHdr.setVisible(False)
@@ -509,33 +295,46 @@ class Main(QtGui.QMainWindow):
 
         self.show()
 
-        ## get Interface
+        ## get Interfaces, add them to the drop-down list
         iflist = get_if_list()
-        i = 0
-        self.Interface.insertItem(i, '')
+        self.Interface.addItem('')
         for d in iflist:
-            i = i+1
-            self.Interface.insertItem(i, d)
+            self.Interface.addItem(d)
 
-        ## get SourceLinkLayerAddresses
+        ## get SourceLinkLayerAddresses, add them to the drop-down list
         i = len(iflist)
-        self.LLSrcAddr.insertItem(0, '')
+        self.LLSrcAddr.addItem('')
         for d in range(0, i):
-            self.LLSrcAddr.insertItem(i+1, get_if_hwaddr(iflist[d]))
+            self.LLSrcAddr.addItem(get_if_hwaddr(iflist[d]))
 
-        ## get IPv6 Addresses
+        ## get IPv6 Addresses, add them to the drop-down list
         ipv6 = read_routes6()
         length_ipv6 = len(ipv6)
         for d in range(0, length_ipv6):
             if ipv6[d][3] == 'lo':
-                self.IPv6_SrcAddr.insertItem(len(self.IPv6_SrcAddr), str(ipv6[d][0]))
-                self.IPv6_DstAddr.insertItem(len(self.IPv6_DstAddr), str(ipv6[d][0]))
+                self.IPv6_SrcAddr.addItem(str(ipv6[d][0]))
         for d in range(0, length_ipv6):
-            if ipv6[d][2] != '::':
-                self.IPv6_DstAddr.insertItem(len(self.IPv6_DstAddr), str(ipv6[d][2]))
+            if ipv6[d][2] != '::' and self.IPv6DstList.contains(ipv6[d][2]) == False:
+                self.IPv6_DstAddr.addItem(str(ipv6[d][2]))
+                self.IPv6DstList.append(str(ipv6[d][2]))
         for d in range(0, length_ipv6):
-            if ipv6[d][1] != 0 and ipv6[d][1] != 128 and ipv6[d][0] != 'fe80::':
-                self.IPv6_DstAddr.insertItem(len(self.IPv6_DstAddr), str(ipv6[d][0])+'1')
+            if ipv6[d][1] != (0 or 128) and self.IPv6DstList.contains(str(ipv6[d][0])+'1') == False:
+                self.IPv6_DstAddr.addItem(str(ipv6[d][0])+'1')
+                self.IPv6DstList.append(str(ipv6[d][0])+'1')
+
+    def slotMax2_32(self):
+        """Diese Fuktion setzt den maximalen Wert eines Line Edit Widget auf 4294967296 (2^32 - 1).
+        """
+        if int(self.NH_ICMP_MTU.text()) >= 4294967296: 
+            self.NH_ICMP_MTU.setText('4294967295')
+
+    def slotMax2_8(self):
+        """Diese Fuktion setzt den maximalen Wert einiger Line Edit Widget auf 255 (2^8 - 1).
+        """
+        if int(self.NH_ICMP_Type.text()) >= 256: 
+            self.NH_ICMP_Type.setText('255')
+        if int(self.NH_ICMP_Code.text()) >= 256: 
+            self.NH_ICMP_Code.setText('255')
 
     def NHConf(self):
         if self.NextHeader_Type.currentText() == 'ICMP':
@@ -560,44 +359,55 @@ class Main(QtGui.QMainWindow):
             self.NH_NoNextHdr.setVisible(True)
 
     def makeActions(self):
+        """In dieser Fuktion werden Aktionen mit der Menubar verknüpft.
+        """
         self._saveAction = QtGui.QAction("&Save", None)
         self._loadAction = QtGui.QAction("&Load", None)
         self._exitAction = QtGui.QAction("&Exit", None)
+        self._getIPv6AddrAction = QtGui.QAction("&Get lokal IPv6 Addresses", None)
+        self._RoundTripAction = QtGui.QAction("&Round-Trip Time", None)
         self.connect(self._saveAction, QtCore.SIGNAL('triggered()'), self.slotSave)
         self.connect(self._loadAction, QtCore.SIGNAL('triggered()'), self.slotLoad)
         self.connect(self._exitAction, QtCore.SIGNAL('triggered()'), self.slotClose)
+        self.connect(self._getIPv6AddrAction, QtCore.SIGNAL('triggered()'), self.slotGetIPv6Addr)
+        self.connect(self._RoundTripAction, QtCore.SIGNAL('triggered()'), self.slotRoundTrip)
 
     def makeMenu(self):
+        """Diese Fuktion erstellt die Menubar.
+        """
         menuBar = self.menuBar()
         fileMenu = menuBar.addMenu("&File")
         fileMenu.addAction(self._saveAction)
         fileMenu.addAction(self._loadAction)
         fileMenu.addAction(self._exitAction)
+        toolMenu = menuBar.addMenu("&Tool")
+        toolMenu.addAction(self._getIPv6AddrAction)
+        toolMenu.addAction(self._RoundTripAction)
 
     def slotAddExtHdr(self):
         """Ruft die Einstellung der Extension Header auf"""
         self.setEnabled(False)
-        Rows = len(self.ExtHdr)
-        eh = EH(self.ExtHdr[Rows-1])
+        Rows = len(self.IPv6.ExtHdr)
+        eh = program_help_gui.EH(self.IPv6.ExtHdr[Rows-1])
         eh.exec_()
-        if self.ExtHdr[Rows-1][0] != '':
+        if self.IPv6.ExtHdr[Rows-1][0] != '':
             numRows = self.ExtHdr_tableWidget.rowCount()
             self.ExtHdr_tableWidget.insertRow(numRows)
-            t1 = QtGui.QTableWidgetItem(self.ExtHdr[Rows-1][0])
+            t1 = QtGui.QTableWidgetItem(self.IPv6.ExtHdr[Rows-1][0])
             self.ExtHdr_tableWidget.setItem(numRows, 0, t1)
             item = self.ExtHdr_tableWidget.item(numRows, 0)
             item.setFlags(Qt.Qt.ItemIsSelectable | Qt.Qt.ItemIsEnabled )
             item.setTextAlignment(Qt.Qt.AlignHCenter | Qt.Qt.AlignVCenter)
-            self.ExtHdr.append(['','','',''])
+            self.IPv6.ExtHdr.append(['','','',''])
         self.setEnabled(True)
 
     def slotEditExtHdr(self):
         Row = self.ExtHdr_tableWidget.currentRow()
         if Row != -1:
             self.setEnabled(False)
-            eh = EH(self.ExtHdr[Row])
+            eh = program_help_gui.EH(self.IPv6.ExtHdr[Row])
             eh.exec_()
-            t1 = QtGui.QTableWidgetItem(self.ExtHdr[Row][0])
+            t1 = QtGui.QTableWidgetItem(self.IPv6.ExtHdr[Row][0])
             self.ExtHdr_tableWidget.setItem(Row, 0, t1)
             item = self.ExtHdr_tableWidget.item(Row, 0)
             item.setFlags(Qt.Qt.ItemIsSelectable | Qt.Qt.ItemIsEnabled )
@@ -609,45 +419,67 @@ class Main(QtGui.QMainWindow):
         Row = self.ExtHdr_tableWidget.currentRow()
         if Row >= 0:
             self.ExtHdr_tableWidget.removeRow(Row)
-            del self.ExtHdr[Row]
+            del self.IPv6.ExtHdr[Row]
             self.ExtHdr_tableWidget.setCurrentCell(Row,0)
 
     def slotRouterAdvertisement(self):
-        """Ruft die Router Advertisement auf"""
+        """Ruft ein Fenster für Router Advertisement auf"""
         self.setEnabled(False)
-        ra = RA(self.RAconf)
+        ra = program_help_gui.RA(self.IPv6.RAconf)
         ra.exec_()
         self.setEnabled(True)
 
-    def slotPacket_Too_Big(self):
+    def slotNeighborSo(self):
+        """Ruft ein Fenster für Neighbor Solicitation auf"""
+        self.setEnabled(False)
+        ns = program_help_gui.NS(self.IPv6.NSconf)
+        ns.exec_()
+        self.setEnabled(True)
+
+    def slotNeighborAd(self):
+        """Ruft ein Fenster für Neighbor Advertisment auf"""
+        self.setEnabled(False)
+        na = program_help_gui.NA(self.IPv6.NAconf)
+        na.exec_()
+        self.setEnabled(True)
+
+    def slotPayload(self):
         """Ruft die Paylaod Einstellungen auf"""
         self.setEnabled(False)
-        payload = Payload(self.PayloadFile)
+        payload = program_help_gui.Payload(self.IPv6.Payload)
         payload.exec_()
-        if ((self.PayloadFile['Capture File'] == '' or None)):
+        if ((self.IPv6.Payload['Capture File'] == '' or None)):
             self.err_msg = QtGui.QMessageBox.information(None, "Info!", "Capture File are requiered\nto create a valid package!")
+            self.NH_TCP_Payload_XLength.setChecked(True)
+            self.NH_UDP_Payload_XLength.setChecked(True)
             self.NH_ICMP_Ping.setChecked(True)
         self.setEnabled(True)
 
-    def slotPayloadTCP(self):
-        """Ruft die Paylaod Einstellungen auf"""
-        self.setEnabled(False)
-        payload = Payload(self.PayloadFile)
-        payload.exec_()
-        if ((self.PayloadFile['Capture File'] == '' or None)):
-            self.err_msg = QtGui.QMessageBox.information(None, "Info!", "Capture File are requiered\nto create a valid package!")
-            self.NH_TCP_Payload_XLength.setChecked(True)
-        self.setEnabled(True)
+    def slotGetIPv6Addr(self):
+        """Diese Funktion enthält ein Werkzeug, mit dessen Hilfe die lokalen IPv6 Addressen ermittelt und in die entsprechende ComboBox hizugefügt werden."""
+        addresses=[]
+        request = Ether()/IPv6(dst='ff02::1')/ICMPv6EchoRequest()
+        ans, unans = srp(request, multi = 1, timeout = 10)
+        query = Ether()/IPv6(dst='ff02::1',hlim=1)/IPv6ExtHdrHopByHop(autopad=0,nh=58)/ICMPv6MLQuery()
+        query[2].options='\x05\x02\x00\x00\x00\x00'
+        sendp(query)
+        ans2 = sniff(filter='ip6[48]=131', timeout=10)
+        if ans != None:
+            for paket in ans:
+                addresses.append(paket[1][IPv6].src)
+        if ans2 != None:
+            for paket in ans2:
+                addresses.append(paket[IPv6].src)
+        uniqueAddr = set(addresses)
+        for address in uniqueAddr:
+            if self.IPv6DstList.contains(address) == False:
+                self.IPv6_DstAddr.addItem(str(address)) 
+                self.IPv6DstList.append(str(address))
 
-    def slotPayloadUDP(self):
-        """Ruft die Paylaod Einstellungen auf"""
-        self.setEnabled(False)
-        payload = Payload(self.PayloadFile)
-        payload.exec_()
-        if ((self.PayloadFile['Capture File'] == '' or None)):
-            self.err_msg = QtGui.QMessageBox.information(None, "Info!", "Capture File are requiered\nto create a valid package!")
-            self.NH_UDP_Payload_XLength.setChecked(True)
-        self.setEnabled(True)
+    def slotRoundTrip(self):
+        """Diese Funktion öffnet ein Werkzeug, mit dessen Hilfe ein Ping mit TCP erzeugt und die benötigte Zeit angegeben wird"""
+        RoundTrip = program_help_gui.RoundTrip(self.IPv6DstList)
+        RoundTrip.exec_()
 
     def slotSave(self):
         """Wird aufgerufen, um alle eingestellten Daten zu speichern."""
@@ -655,7 +487,7 @@ class Main(QtGui.QMainWindow):
         if filename != '':
             if filename.endsWith('.pcap') == False:
                 filename=(filename+'.pcap')
-            self.Buildit(1,filename)
+            self.creatIPv6(1, filename)
 
     def slotLoad(self):
         """Wird aufgerufen, um früher eingestellten Daten zu laden."""
@@ -671,17 +503,17 @@ class Main(QtGui.QMainWindow):
         Data = Data[1]
         for d in range(self.ExtHdr_tableWidget.rowCount()):
             self.ExtHdr_tableWidget.removeRow(0)
-        self.ExtHdr = [['','','','']]
+        self.IPv6.ExtHdr = [['','','','']]
         d = 0
         temp = 0
         count = 0
         while count < 1:
             if self.NextHeader == 0:
                 temp = Data.nh
-                self.ExtHdr[d][0] = 'Hop By Hop Options'
+                self.IPv6.ExtHdr[d][0] = 'Hop By Hop Options'
                 numRows = self.ExtHdr_tableWidget.rowCount()
                 self.ExtHdr_tableWidget.insertRow(numRows)
-                t1 = QtGui.QTableWidgetItem(self.ExtHdr[d][0])
+                t1 = QtGui.QTableWidgetItem(self.IPv6.ExtHdr[d][0])
                 self.ExtHdr_tableWidget.setItem(numRows, 0, t1)
                 item = self.ExtHdr_tableWidget.item(numRows, 0)
                 item.setFlags(Qt.Qt.ItemIsSelectable | Qt.Qt.ItemIsEnabled)
@@ -695,11 +527,11 @@ class Main(QtGui.QMainWindow):
                 Data = Data[2]
             elif self.NextHeader == 43:
                 temp = Data.nh
-                self.ExtHdr[d][0] = 'Routing'
-                self.ExtHdr[d][1] = Data.addresses
+                self.IPv6.ExtHdr[d][0] = 'Routing'
+                self.IPv6.ExtHdr[d][1] = Data.addresses
                 numRows = self.ExtHdr_tableWidget.rowCount()
                 self.ExtHdr_tableWidget.insertRow(numRows)
-                t1 = QtGui.QTableWidgetItem(self.ExtHdr[d][0])
+                t1 = QtGui.QTableWidgetItem(self.IPv6.ExtHdr[d][0])
                 self.ExtHdr_tableWidget.setItem(numRows, 0, t1)
                 item = self.ExtHdr_tableWidget.item(numRows, 0)
                 item.setFlags(Qt.Qt.ItemIsSelectable | Qt.Qt.ItemIsEnabled)
@@ -710,13 +542,13 @@ class Main(QtGui.QMainWindow):
                 Data = Data[1]
             elif self.NextHeader == 44:
                 temp = Data.nh
-                self.ExtHdr[d][0] = 'Fragmentation'
-                self.ExtHdr[d][1] = Data.offset
-                self.ExtHdr[d][2] = Data.id
-                self.ExtHdr[d][3] = Data.m
+                self.IPv6.ExtHdr[d][0] = 'Fragmentation'
+                self.IPv6.ExtHdr[d][1] = Data.offset
+                self.IPv6.ExtHdr[d][2] = Data.id
+                self.IPv6.ExtHdr[d][3] = Data.m
                 numRows = self.ExtHdr_tableWidget.rowCount()
                 self.ExtHdr_tableWidget.insertRow(numRows)
-                t1 = QtGui.QTableWidgetItem(self.ExtHdr[d][0])
+                t1 = QtGui.QTableWidgetItem(self.IPv6.ExtHdr[d][0])
                 self.ExtHdr_tableWidget.setItem(numRows, 0, t1)
                 item = self.ExtHdr_tableWidget.item(numRows, 0)
                 item.setFlags(Qt.Qt.ItemIsSelectable | Qt.Qt.ItemIsEnabled)
@@ -727,10 +559,10 @@ class Main(QtGui.QMainWindow):
                 Data = Data[1]
             elif self.NextHeader == 60:
                 temp = Data.nh
-                self.ExtHdr[d][0] = 'Destination Options'
+                self.IPv6.ExtHdr[d][0] = 'Destination Options'
                 numRows = self.ExtHdr_tableWidget.rowCount()
                 self.ExtHdr_tableWidget.insertRow(numRows)
-                t1 = QtGui.QTableWidgetItem(self.ExtHdr[d][0])
+                t1 = QtGui.QTableWidgetItem(self.IPv6.ExtHdr[d][0])
                 self.ExtHdr_tableWidget.setItem(numRows, 0, t1)
                 item = self.ExtHdr_tableWidget.item(numRows, 0)
                 item.setFlags(Qt.Qt.ItemIsSelectable | Qt.Qt.ItemIsEnabled)
@@ -749,10 +581,23 @@ class Main(QtGui.QMainWindow):
                     self.NH_ICMP_Ping.setChecked(True)
                 elif Data.type == 134:
                     self.NH_ICMP_RouterAd.setChecked(True)
-                    self.RAconf['Prefix'] = Data.prefix
-                    self.RAconf['Prefixlen'] = Data.prefixlen
+                    self.IPv6.RAconf['Prefix'] = Data.prefix
+                    self.IPv6.RAconf['Prefixlen'] = Data.prefixlen
+                    self.IPv6.RAconf['CHLim'] = Data.chlim
+                    if Data.M == 1: self.IPv6.RAconf['M'] = True
+                    else: self.IPv6.RAconf['M'] = False
+                    if Data.O == 1: self.IPv6.RAconf['O'] = True
+                    else: self.IPv6.RAconf['O'] = False
+                elif Data.type == 135:
+                    self.NH_ICMP_NeighborSo.setChecked(True)
+                    self.IPv6.NSconf['NS_LLSrcAddr'] = Data.tgt
                 elif Data.type == 2:
                     self.NH_ICMP_PacketTooBig.setChecked(True)
+                    self.NH_ICMP_MTU.setText(str(Data.mtu))
+                else:
+                    self.NH_ICMP_Unknown.setChecked(True)
+                    self.NH_ICMP_Type.setText(str(Data.type))
+                    self.NH_ICMP_Code.setText(str(Data.code))
                 count = 1
             elif self.NextHeader == 6:
                 self.NextHeader_Type.setCurrentIndex(1)
@@ -789,10 +634,12 @@ class Main(QtGui.QMainWindow):
             self.NextHeader = temp
 
     def slotSend(self):
-        self.Buildit(0,'')
+        """Wird aufgerufen, um alle eingestellten Daten zu senden."""
+        self.creatIPv6(0, '')
 
     def slotClipboard(self):
-        self.Buildit(2,'')
+        """Wird aufgerufen, um alle eingestellten Daten in den Zwischenspeicher zu speichern."""
+        self.creatIPv6(2, '')
 
     def slotClose(self):
         """Wird aufgerufen, wenn das Fenster geschlossen wird"""
@@ -800,395 +647,95 @@ class Main(QtGui.QMainWindow):
         if ret == QtGui.QMessageBox.Yes:
             self.close()
 
-
-###################
-## build ip packets
-
-    def Buildit(self,Type,File):
-
-        ##################
-        ## Ethernet Header
-
-        enDstLLaddr = self.LLDstAddr
-
-        if enDstLLaddr.text() != '':
-            self.EthH['LLDstAddr'] = str(enDstLLaddr.text())
-        else:
-            self.EthH['LLDstAddr'] = None
-
-        cbSrcLLaddr = self.LLSrcAddr
-
-        if cbSrcLLaddr.currentText() != '':
-            self.EthH['LLSourceAddr'] = str(cbSrcLLaddr.currentText())
-        else:
-            self.EthH['LLSourceAddr'] = None
-
-        self.IPv6packet['EthHeader'] = Ether(dst=self.EthH['LLDstAddr'],
-                                             src=self.EthH['LLSourceAddr'])
-
-        ## sourcecode...
-        if ((self.EthH['LLDstAddr'] != None) and (self.EthH['LLSourceAddr'] != None)):
-            self.sourcecode = ('Ether(dst=\''+str(self.EthH['LLDstAddr'])+
-                               '\', src=\''+str(self.EthH['LLSourceAddr'])+'\')')
-        elif (self.EthH['LLDstAddr'] != None):
-            self.sourcecode = ('Ether(dst=\''+str(self.EthH['LLDstAddr'])+'\')')
-        elif (self.EthH['LLSourceAddr'] != None):
-            self.sourcecode = ('Ether(src=\''+str(self.EthH['LLSourceAddr'])+'\')')
-        elif ((self.EthH['LLDstAddr'] == None) and (self.EthH['LLSourceAddr'] == None)):
-            self.sourcecode = ('Ether()')
-
-        ##############
-        ## IPv6 Header
-
-        enDstIP =  self.IPv6_DstAddr
-        if enDstIP.currentText() != '':
-            self.IPH['Dst'] = str(enDstIP.currentText())
-        else:
-            self.IPH['Dst'] = None
+    def creatIPv6(self, Option, File):
+        """Erstellen des IPv6 Paketes in einer Datei für spätere Weiterverarbeitung und 
+        ruft die Funktion :class:`Buildit` auf.
+        """
+        self.IPv6.EthHdr['LLDstAddr'] = str(self.LLDstAddr.text())
+        self.IPv6.EthHdr['LLSrcAddr'] = str(self.LLSrcAddr.currentText())
+        self.IPv6.EthHdr['Interface'] = str(self.Interface.currentText())
+        self.IPv6.IPHdr['DstIPAddr'] = str(self.IPv6_DstAddr.currentText())
+        self.IPv6.IPHdr['SrcIPAddr'] = str(self.IPv6_SrcAddr.currentText())
+        if self.IPv6.EthHdr['LLDstAddr'] == 'ff:ff:ff:ff:ff:ff': self.IPv6.EthHdr['LLDstAddr'] = None
+        if self.IPv6.EthHdr['LLSrcAddr'] == ':::::': self.IPv6.EthHdr['LLSrcAddr'] = None
+        if self.IPv6.IPHdr['SrcIPAddr'] == '': self.IPv6.IPHdr['SrcIPAddr'] = None
+        if self.IPv6.IPHdr['DstIPAddr'] == '':
             self.err_msg = QtGui.QMessageBox.information(None, "Info!", "Destination Address is requiered\nto create a valid package!")
-
-        enSourceIP =  self.IPv6_SrcAddr
-        if enSourceIP.currentText() != '':
-            self.IPH['SourceIP'] = str(enSourceIP.currentText())
-        else:
-            self.IPH['SourceIP'] = None
-
-        self.IPv6packet['IPHeader'] = IPv6(dst=self.IPH['Dst'],
-                                           src=self.IPH['SourceIP'])
-
-        ## sourcecode...
-        if ((self.IPH['Dst'] != None) and (self.IPH['SourceIP'] != None)):
-            self.sourcecode = (self.sourcecode+'/IPv6(dst=\''+self.IPH['Dst']+
-                               '\', src=\''+self.IPH['SourceIP']+'\')')
-        elif (self.IPH['Dst'] != None):
-            self.sourcecode = (self.sourcecode+'/IPv6(dst=\''+self.IPH['Dst']+
-                               '\')')
-        elif (self.IPH['SourceIP'] != None):
-            self.sourcecode = (self.sourcecode+'/IPv6(src=\''+
-                               self.IPH['SourceIP']+'\')')
-        elif ((self.IPH['Dst'] == None) and (self.IPH['SourceIP'] == None)):
-            self.sourcecode = (self.sourcecode+'/IPv6()')
-
-        ############################
-        ## add extension header if set
-
-        self.NumExtHdr = len(self.ExtHdr)
-        if self.NumExtHdr > 0:
-            self.IPv6packet['ExtHeader'] = self.BuildExtHdr(self.NumExtHdr)
-        else:
-            self.IPv6packet['ExtHeader'] = None
-
-        ########################
-        ## add the next header
-
-        self.IPv6packet['NextHeader'] = self.BuildNextHeader()
-
-        ############
-        ## get iface
-
-        cbIface =  self.Interface
-        if cbIface.currentText() != '':
-            Interface = str(cbIface.currentText())
-        else:
-            Interface = None
-
-        ############
-        ## Create Sourcecode
-
-        if Interface == None:
-            self.sourcecode = self.sourcecode
-        else:
-            self.sourcecode = (self.sourcecode+
-                               ', iface=\''+Interface+'\'')
-
-        self.sourcecode = ('sendp('+self.sourcecode+')')
-
-        ##########
-        ## send or save (pcap og Clipbord)
-
-        if Type == 0:
-            ## send
-            if self.IPv6packet['ExtHeader'] == (None or ''):
-                if self.IPv6packet['NextHeader'] != None:
-                    sendp(self.IPv6packet['EthHeader']/self.IPv6packet['IPHeader']
-                          /self.IPv6packet['NextHeader'], iface = Interface)
-                else:
-                    sendp(self.IPv6packet['EthHeader']/self.IPv6packet['IPHeader']
-                          , iface = Interface)
-            else:
-                if self.IPv6packet['NextHeader'] != None:
-                    sendp(self.IPv6packet['EthHeader']/self.IPv6packet['IPHeader']
-                          /self.IPv6packet['ExtHeader']
-                          /self.IPv6packet['NextHeader'], iface = Interface)
-                else:
-                    sendp(self.IPv6packet['EthHeader']/self.IPv6packet['IPHeader']
-                          /self.IPv6packet['ExtHeader'], iface = Interface)
-        elif Type == 1:
-            ## save as .pcap
-            if self.IPv6packet['ExtHeader'] == (None or ''):
-                if self.IPv6packet['NextHeader'] != None:
-                    wrpcap(File, (self.IPv6packet['EthHeader']/self.IPv6packet['IPHeader']/self.IPv6packet['NextHeader']))
-                else:
-                    wrpcap(File, (self.IPv6packet['EthHeader']/self.IPv6packet['IPHeader']))
-            else:
-                if self.IPv6packet['NextHeader'] != None:
-                    wrpcap(File, (self.IPv6packet['EthHeader']/self.IPv6packet['IPHeader']/self.IPv6packet['ExtHeader']/self.IPv6packet['NextHeader']))
-                else:
-                    wrpcap(File, (self.IPv6packet['EthHeader']/self.IPv6packet['IPHeader']/self.IPv6packet['ExtHeader']))
-        else:
-            ## save to Clipboard
-            Clipboard = QtGui.QApplication.clipboard()
-            Clipboard.setText(self.sourcecode)
-
-        ## show sourcecode
-        disp_sourcecode = QtGui.QMessageBox.information(None, "Scapy Quellcode", "Scapy Quellcode:\n\n%s" % self.sourcecode )
-
-    ###############
-    ## Build Extension Header
-
-    def  BuildExtHdr(self, Num):
-
-        ExtensionHeader = ''
-        for d in range(Num-1):
-            if self.ExtHdr[d][0] == 'Hop By Hop Options':
-                self.sourcecode = (self.sourcecode + ' /IPv6ExtHdrHopByHop()')
-                if d == 0:
-                    ExtensionHeader = IPv6ExtHdrHopByHop()
-                else:
-                    ExtensionHeader = ExtensionHeader/IPv6ExtHdrHopByHop()
-            elif self.ExtHdr[d][0] == 'Destination Options':
-                self.sourcecode = (self.sourcecode + ' /IPv6ExtHdrDestOpt()')
-                if d == 0:
-                    ExtensionHeader = IPv6ExtHdrDestOpt()
-                else:
-                    ExtensionHeader = ExtensionHeader/IPv6ExtHdrDestOpt()
-            elif self.ExtHdr[d][0] == 'Routing':
-                i = len(self.ExtHdr[d][1])
-                if (self.ExtHdr[d][1][0] != '' or None):
-                    self.sourcecode = (self.sourcecode + ' /IPv6ExtHdrRouting(addresses=[\'' + self.ExtHdr[d][1][0])
-                    if i > 1:
-                        for d2 in range(i-1):
-                            self.sourcecode = (self.sourcecode + '\',\'' +
-                                               self.ExtHdr[d][1][d2+1])
-                self.sourcecode = (self.sourcecode + '\'])')
-                if d == 0:
-                    ExtensionHeader = IPv6ExtHdrRouting(addresses = self.ExtHdr[d][1])
-                else:
-                    ExtensionHeader = ExtensionHeader/IPv6ExtHdrRouting(addresses = self.ExtHdr[d][1])
-            elif self.ExtHdr[d][0] == 'Fragmentation':
-                if self.ExtHdr[d][3] == 0:
-                    self.M_Flag = '0'
-                    if d == 0:
-                        ExtensionHeader = IPv6ExtHdrFragment(m = self.ExtHdr[d][3], offset = int(self.ExtHdr[d][1]), id = int(self.ExtHdr[d][2]))
-                    else:
-                        ExtensionHeader = ExtensionHeader/IPv6ExtHdrFragment(m = 0, offset = int(self.ExtHdr[d][1]), id = int(self.ExtHdr[d][2]))
-                else:
-                    self.M_Flag = '1'
-                    if d == 0:
-                        ExtensionHeader = IPv6ExtHdrFragment(m = self.ExtHdr[d][3], offset = int(self.ExtHdr[d][1]), id = int(self.ExtHdr[d][2]))
-                    else:
-                        ExtensionHeader = ExtensionHeader/IPv6ExtHdrFragment(m = 1, offset = int(self.ExtHdr[d][1]), id = int(self.ExtHdr[d][2]))
-                self.sourcecode = (self.sourcecode + ' /IPv6ExtHdrFragment(m=' + 
-                                  str(self.M_Flag) + ',offset=' + 
-                                  str(self.ExtHdr[d][1]) + ',id=' + 
-                                  str(self.ExtHdr[d][2]) + ')')
-        return(ExtensionHeader)
-
-    ###############
-    ## Build ICMPv6
-
-    def BuildNextHeader(self):
-
+            return
         if self.NextHeader_Type.currentText() == 'ICMP':
+            self.IPv6.indize = 0
             if self.NH_ICMP_Ping.isChecked():
-                NextHeader = self.BuildICMPv6_Ping()
+                self.IPv6.ICMP['indize'] = 0
             elif self.NH_ICMP_RouterAd.isChecked():
-                NextHeader = self.BuildICMPv6_RA()
+                self.IPv6.ICMP['indize'] = 1
+            elif self.NH_ICMP_RouterSo.isChecked():
+                self.IPv6.ICMP['indize'] = 2
+            elif self.NH_ICMP_NeighborAd.isChecked():
+                self.IPv6.ICMP['indize'] = 3
+            elif self.NH_ICMP_NeighborSo.isChecked():
+                self.IPv6.ICMP['indize'] = 4
             elif self.NH_ICMP_PacketTooBig.isChecked():
-                NextHeader = self.BuildICMPv6_PacketTooBig()
+                self.IPv6.ICMP['indize'] = 5
+                self.IPv6.PTB['MTU'] = self.NH_ICMP_MTU.text()
+            elif self.NH_ICMP_Unknown.isChecked():
+                self.IPv6.ICMP['indize'] = 6
+                self.IPv6.ICMP['Type'] = self.NH_ICMP_Type.text()
+                self.IPv6.ICMP['Code'] = self.NH_ICMP_Code.text()
+                if self.IPv6.ICMP['Type'] == '':self.IPv6.ICMP['Type'] = '1'
+                if self.IPv6.ICMP['Code'] == '': self.IPv6.ICMP['Code'] = '0'
+                self.IPv6.ICMP['Message'] = str(self.NH_ICMP_Message.toPlainText())
         elif self.NextHeader_Type.currentText() == 'TCP':
-            NextHeader = self.BuildTCP()
+            self.IPv6.indize = 1
+            if self.NH_TCP_SrcPort.text() == '': self.NH_TCP_SrcPort.setText('20')
+            if self.NH_TCP_DstPort.text() == '': self.NH_TCP_DstPort.setText('80')
+            self.IPv6.TCP_UDP['SrcPort'] = self.NH_TCP_SrcPort.text()
+            self.IPv6.TCP_UDP['DstPort'] = self.NH_TCP_DstPort.text()
+            if self.NH_TCP_Payload_XLength.isChecked():
+                self.IPv6.Payload['indizeP'] = 0
+                self.IPv6.Payload['Payloadlen'] = self.NH_TCP_Payload_Length.text()
+            elif self.NH_TCP_Payload_PayString.isChecked():
+                self.IPv6.Payload['indizeP'] = 1
+                self.IPv6.Payload['PayloadString'] = self.NH_TCP_Payload_String.text()
+            elif self.NH_TCP_Payload_PcapFile.isChecked():
+                self.IPv6.Payload['indizeP'] = 2
+            elif self.NH_TCP_Payload_NoPayload.isChecked():
+                self.IPv6.Payload['indizeP'] = 3
+            Flags=0
+            if self.NH_TCP_Flag_URG.isChecked():
+                Flags = Flags + 32
+            if self.NH_TCP_Flag_ACK.isChecked():
+                Flags = Flags + 16
+            if self.NH_TCP_Flag_PSH.isChecked():
+                Flags = Flags + 8
+            if self.NH_TCP_Flag_RST.isChecked():
+                Flags = Flags + 4
+            if self.NH_TCP_Flag_SYN.isChecked():
+                Flags = Flags + 2
+            if self.NH_TCP_Flag_FIN.isChecked():
+                Flags = Flags + 1
+            self.IPv6.TCP_UDP['Flags'] = Flags            
         elif self.NextHeader_Type.currentText() == 'UDP':
-            NextHeader = self.BuildUDP()
+            self.IPv6.indize = 2
+            if self.NH_UDP_SrcPorttext() == '': self.NH_UDP_SrcPort.setText('53')
+            if self.NH_UDP_DstPorttext() == '': self.NH_UDP_DstPort.setText('53')
+            self.IPv6.TCP_UDP['SrcPort'] = self.NH_UDP_SrcPort.text()
+            self.IPv6.TCP_UDP['DstPort'] = self.NH_UDP_DstPort.text()
+            if self.NH_UDP_Payload_XLength.isChecked():
+                self.IPv6.Payload['indizeP'] = 0
+                self.IPv6.Payload['Payloadlen'] = self.NH_UDP_Payload_Length.text()
+            elif self.NH_UDP_Payload_PayString.isChecked():
+                self.IPv6.Payload['indizeP'] = 1
+                self.IPv6.Payload['PayloadString'] = self.NH_UDP_Payload_String.text()
+            elif self.NH_UDP_Payload_PcapFile.isChecked():
+                self.IPv6.Payload['indizeP'] = 2
+            elif self.NH_UDP_Payload_NoPayload.isChecked():
+                self.IPv6.Payload['indizeP'] = 3
         elif self.NextHeader_Type.currentText() == 'No Next Header':
-            NextHeader = self.BuildNoNextHeader()
-        else:
-            self.Fehler = QtGui.QMessageBox.information(None, '', 'Sorry this Next Header is not implemented yet.')
+            self.IPv6.indize = 3
 
-        return(NextHeader)
+        program_background.Buildit(Option, File, self.IPv6)
 
-    ## Echo Request
 
-    def BuildICMPv6_Ping(self):
-        self.sourcecode = self.sourcecode+'/ICMPv6EchoRequest()'
-        return(ICMPv6EchoRequest())
-
-    ## Router Advertisement
-
-    def BuildICMPv6_RA(self):
-        ra=ICMPv6ND_RA(chlim=255, H=0L, M=0L, O=1L,
-                       routerlifetime=1800, P=0L, retranstimer=0, prf=0L,
-                       res=0L)
-
-        prefix_info=ICMPv6NDOptPrefixInfo(A=1L, res2=0, res1=0L, L=1L,
-                                          len=4,
-                                          prefix=str(self.RAconf['Prefix']),
-                                          R=0L, validlifetime=1814400,
-                                          prefixlen=int(self.RAconf['Prefixlen']),
-                                          preferredlifetime=604800, type=3)
-
-        ## if source link-layer-addr set
-
-        if (self.RAconf['SourceLL'] != None) and (self.RAconf['SourceLL'] != ''):
-            llad=ICMPv6NDOptSrcLLAddr(type=1, len=1,
-                                      lladdr=str(self.RAconf['SourceLL']))
-
-            self.sourcecode = (self.sourcecode+
-                               '/ICMPv6ND_RA(chlim=255, H=0L, M=0L, O=1L, '+
-                               'routerlifetime=1800, P=0L, retranstimer=0, '+
-                               'prf=0L, res=0L)'+
-                               '/ICMPv6NDOptPrefixInfo(A=1L, res2=0, res1=0L, '+
-                               'L=1L, len=4, '+
-                               'prefix=\''+self.RAconf['Prefix']+'\', '+
-                               'R=0L, validlifetime=1814400, '+
-                               'prefixlen='+self.RAconf['Prefixlen']+', '+
-                               'preferredlifetime=604800, type=3)'+
-                               '/ICMPv6NDOptSrcLLAddr(type=1, len=1, '+
-                               'lladdr=\''+self.RAconf['SourceLL']+'\')')
-            return(ra/prefix_info/llad)
-        else:
-            self.sourcecode = (self.sourcecode+
-                               '/ICMPv6ND_RA(chlim=255, H=0L, M=0L, O=1L, '+
-                               'routerlifetime=1800, P=0L, retranstimer=0, '+
-                               'prf=0L, res=0L)'+
-                               '/ICMPv6NDOptPrefixInfo(A=1L, res2=0, res1=0L, '+
-                               'L=1L, len=4, '+
-                               'prefix=\''+self.RAconf['Prefix']+'\', '+
-                               'R=0L, validlifetime=1814400, '+
-                               'prefixlen='+self.RAconf['Prefixlen']+', '+
-                               'preferredlifetime=604800, type=3)')
-            return(ra/prefix_info)
-
-    ## Packet Too Big
-
-    def BuildICMPv6_PacketTooBig(self):
-
-        enMTU = self.NH_ICMP_MTU
-        if enMTU.text() != '':
-            MTU = enMTU.text()
-        else:
-            MTU = None
-        q=ICMPv6PacketTooBig(mtu=int(MTU))
-        self.sourcecode = self.sourcecode+' /ICMPv6PacketTooBig(mtu='+MTU+')'
-
-        enPCAP = self.PayloadFile['Capture File']
-        if enPCAP != '':
-            path = enPCAP
-            capture = rdpcap(str(path))
-            enPCAPno = self.PayloadFile['Packet No.']
-            if enPCAPno != '':
-                no = int(enPCAPno)-1
-            else:
-                no = 0
-            q = q/capture[no][IPv6]
-            self.sourcecode = (self.sourcecode+' /rdpcap(\''+path+'\')['+
-                               str(no)+'][IPv6]')
-        return(q)
-
-    ## TCP
-
-    def BuildTCP(self):
-        if self.NH_TCP_SrcPort.text() != '':
-            SPort=int(self.NH_TCP_SrcPort.text())
-        else:
-            self.NH_TCP_SrcPort.setText('20')
-            SPort=int(self.NH_TCP_SrcPort.text())
-        if self.NH_TCP_DstPort.text() != '':
-            DPort=int(self.NH_TCP_DstPort.text())
-        else:
-            self.NH_TCP_DstPort.setText('80')
-            DPort=int(self.NH_TCP_DstPort.text())
-        Flags=0
-        if self.NH_TCP_Flag_URG.isChecked():
-            Flags = Flags + 32
-        if self.NH_TCP_Flag_ACK.isChecked():
-            Flags = Flags + 16
-        if self.NH_TCP_Flag_PSH.isChecked():
-            Flags = Flags + 8
-        if self.NH_TCP_Flag_RST.isChecked():
-            Flags = Flags + 4
-        if self.NH_TCP_Flag_SYN.isChecked():
-            Flags = Flags + 2
-        if self.NH_TCP_Flag_FIN.isChecked():
-            Flags = Flags + 1
-        tcp= TCP(sport=SPort, dport=DPort, flags=Flags)
-        self.sourcecode = self.sourcecode+'/TCP(sport='+str(SPort)+', dport='+str(DPort)+', flags='+str(Flags)+')'
-        if self.NH_TCP_Payload_NoPayload.isChecked():
-            return(tcp)
-        elif self.NH_TCP_Payload_XLength.isChecked():
-            load = 'X'*int(self.NH_TCP_Payload_Length.text())
-            self.sourcecode = self.sourcecode+'/\'X\'*'+self.NH_TCP_Payload_Length.text()
-            return(tcp/load)
-        elif self.NH_TCP_Payload_PayString.isChecked():
-            load = str(self.NH_TCP_Payload_String.text())
-            self.sourcecode = self.sourcecode+'/\''+self.NH_TCP_Payload_String.text()+'\''
-            return(tcp/load)
-        elif self.NH_TCP_Payload_PcapFile.isChecked():
-            path = self.PayloadFile['Capture File']
-            capture = rdpcap(str(path))
-            PCAPno = self.PayloadFile['Packet No.']
-            if PCAPno != '':
-                no = int(PCAPno)-1
-            else:
-                no = 0
-            load = capture[no][Raw]
-            self.sourcecode = (self.sourcecode+' /rdpcap(\''+path+'\')['+
-                               str(no)+'][Raw]')
-            return(tcp/load)
-
-    ## UDP
-
-    def BuildUDP(self):
-        if self.NH_UDP_SrcPort.text() != '':
-            SPort=int(self.NH_UDP_SrcPort.text())
-        else:
-            self.NH_UDP_SrcPort.setText('53')
-            SPort=int(self.NH_UDP_SrcPort.text())
-        if self.NH_UDP_DstPort.text() != '':
-            DPort=int(self.NH_UDP_DstPort.text())
-        else:
-            self.NH_UDP_DstPort.setText('53')
-            DPort=int(self.NH_UDP_DstPort.text())
-        udp= UDP(sport=SPort, dport=DPort)
-        self.sourcecode = self.sourcecode+'/UDP(sport='+str(SPort)+' ,dport='+str(DPort)+')'
-        if self.NH_UDP_Payload_NoPayload.isChecked():
-            return(udp)
-        elif self.NH_UDP_Payload_XLength.isChecked():
-            load = 'X' * int(self.NH_UDP_Payload_Length.text())
-            self.sourcecode = self.sourcecode+'/\'X\'*'+self.NH_UDP_Payload_Length.text()
-            return(udp/load)
-        elif self.NH_UDP_Payload_PayString.isChecked():
-            load = str(self.NH_UDP_Payload_String.text())
-            self.sourcecode = self.sourcecode+'/\''+self.NH_UDP_Payload_String.text()+'\''
-            return(udp/load)
-        elif self.NH_UDP_Payload_PcapFile.isChecked():
-            path = self.PayloadFile['Capture File']
-            capture = rdpcap(str(path))
-            PCAPno = self.PayloadFile['Packet No.']
-            if PCAPno != '':
-                no = int(PCAPno)-1
-            else:
-                no = 0
-            load = capture[no][Raw]
-            self.sourcecode = (self.sourcecode+' /rdpcap(\''+path+'\')['+
-                               str(no)+'][Raw]')
-            return(udp/load)
-
-    ## No Next Header
-
-    def BuildNoNextHeader(self):
-        self.sourcecode = self.sourcecode
-        return(None)
 
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
